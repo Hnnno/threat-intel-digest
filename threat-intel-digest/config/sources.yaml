@@ -1,0 +1,32 @@
+rss_feeds:
+  - name: "The Hacker News"
+    url: "https://feeds.feedburner.com/TheHackersNews"
+  - name: "Krebs on Security"
+    url: "https://krebsonsecurity.com/feed/"
+  - name: "BleepingComputer"
+    url: "https://www.bleepingcomputer.com/feed/"
+  - name: "CISA Alerts"
+    url: "https://www.cisa.gov/cybersecurity-advisories/all.xml"
+
+keywords:
+  critical:
+    - "critical"
+    - "RCE"
+    - "zero-day"
+    - "0-day"
+    - "actively exploited"
+    - "ransomware"
+  high:
+    - "vulnerability"
+    - "CVE"
+    - "malware"
+    - "phishing"
+    - "data breach"
+  medium:
+    - "patch"
+    - "update"
+    - "advisory"
+    - "warning"
+
+max_items_per_feed: 10
+max_age_hours: 24
