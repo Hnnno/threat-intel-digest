@@ -1,7 +1,7 @@
 """
 api_collector.py
-Consulta APIs de threat intelligence (VirusTotal, AbuseIPDB) para enriquecer
-el reporte con IOCs, reputacion de IPs y analisis de hashes.
+Consulta APIs de threat intelligence (VirusTotal, AbuseIPDB, AlienVault OTX, Shodan)
+para enriquecer el reporte con IOCs, reputacion de IPs y analisis de hashes.
 """
 
 import os
@@ -11,7 +11,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 VIRUSTOTAL_BASE = "https://www.virustotal.com/api/v3"
-ABUSEIPDB_BASE = "https://api.abuseipdb.com/api/v2"
+ABUSEIPDB_BASE  = "https://api.abuseipdb.com/api/v2"
+OTX_BASE        = "https://otx.alienvault.com/api/v1"
+SHODAN_BASE     = "https://api.shodan.io"
 
 
 def get_virustotal_ip_report(ip: str) -> dict | None:
@@ -121,8 +123,79 @@ def collect_all() -> dict:
     Punto de entrada principal del modulo.
     Retorna un diccionario con todos los datos recopilados desde APIs.
     """
-    top_ips = get_top_abusive_ips(limit=5)
+    top_ips    = get_top_abusive_ips(limit=5)
+    otx_pulses = get_otx_latest_pulses(limit=5)
 
     return {
         "top_abusive_ips": top_ips,
+        "otx_pulses":      otx_pulses,
     }
+
+
+def get_otx_latest_pulses(limit: int = 5) -> list[dict]:
+    """
+    Obtiene los pulsos mas recientes de AlienVault OTX.
+    Cada pulso representa una campana de amenaza con IOCs asociados.
+    """
+    api_key = os.getenv("OTX_API_KEY")
+    if not api_key:
+        logger.warning("OTX_API_KEY no configurada. Saltando consulta a AlienVault OTX.")
+        return []
+
+    url = f"{OTX_BASE}/pulses/subscribed"
+    headers = {"X-OTX-API-KEY": api_key}
+    params = {"limit": limit}
+
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+        response.raise_for_status()
+        pulses = response.json().get("results", [])
+
+        return [
+            {
+                "name": p.get("name", "Sin nombre"),
+                "description": p.get("description", ""),
+                "author": p.get("author_name", "Unknown"),
+                "tags": p.get("tags", []),
+                "ioc_count": len(p.get("indicators", [])),
+                "created": p.get("created", ""),
+                "url": f"https://otx.alienvault.com/pulse/{p.get('id', '')}",
+            }
+            for p in pulses
+        ]
+
+    except requests.RequestException as e:
+        logger.error(f"Error consultando AlienVault OTX: {e}")
+        return []
+
+
+def get_shodan_ip_info(ip: str) -> dict | None:
+    """
+    Consulta Shodan para obtener informacion de puertos abiertos y servicios
+    expuestos de una IP determinada.
+    """
+    api_key = os.getenv("SHODAN_API_KEY")
+    if not api_key:
+        logger.warning("SHODAN_API_KEY no configurada. Saltando consulta a Shodan.")
+        return None
+
+    url = f"{SHODAN_BASE}/shodan/host/{ip}"
+    params = {"key": api_key}
+
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        return {
+            "ip": ip,
+            "org": data.get("org", "Unknown"),
+            "country": data.get("country_name", "Unknown"),
+            "open_ports": data.get("ports", []),
+            "hostnames": data.get("hostnames", []),
+            "vulnerabilities": list(data.get("vulns", {}).keys()),
+        }
+
+    except requests.RequestException as e:
+        logger.error(f"Error consultando Shodan para IP {ip}: {e}")
+        return None

@@ -38,6 +38,8 @@ Revisar manualmente cada fuente todos los días es ineficiente y propenso a omis
 |---|---|
 | [VirusTotal](https://virustotal.com) | Analisis de hashes, IPs y dominios maliciosos |
 | [AbuseIPDB](https://abuseipdb.com) | Reputacion y reporte de IPs abusivas |
+| [AlienVault OTX](https://otx.alienvault.com) | Pulsos de threat intelligence con IOCs |
+| [Shodan](https://shodan.io) | Informacion de puertos y servicios expuestos por IP |
 
 ---
 
@@ -51,6 +53,8 @@ Revisar manualmente cada fuente todos los días es ineficiente y propenso a omis
 - `python-telegram-bot` — envio de reportes por Telegram
 - `schedule` — ejecucion periodica automatizada
 - `python-dotenv` — manejo seguro de credenciales
+- `flask` — dashboard web opcional
+- `shodan` — cliente oficial de Shodan
 
 ---
 
@@ -68,7 +72,8 @@ threat-intel-digest/
 │   ├── notifiers/
 │   │   ├── email_notifier.py      # Envia reporte por email
 │   │   └── telegram_notifier.py   # Envia reporte por Telegram
-│   └── main.py                    # Orquestador principal
+│   ├── main.py                    # Orquestador principal
+│   └── dashboard.py               # Dashboard web opcional (Flask)
 ├── config/
 │   └── sources.yaml               # Lista de feeds y APIs configurables
 ├── tests/
@@ -157,6 +162,18 @@ El proceso corre en segundo plano y envia el reporte todos los dias a la hora de
 
 ---
 
+### Dashboard web (opcional)
+
+```bash
+python src/dashboard.py
+```
+
+Abri http://localhost:5000 en tu navegador. El dashboard muestra articulos por severidad,
+IPs mas reportadas y pulsos de AlienVault OTX en tiempo real.
+Para cambiar el puerto, agrega `DASHBOARD_PORT=8080` en tu `.env`.
+
+---
+
 ## Ejemplo de reporte generado
 
 ```
@@ -191,15 +208,15 @@ Items procesados: 47 | Relevantes: 3 | Tiempo: 12s
 - [x] Notificador por email
 - [x] Filtrado por severidad y palabras clave
 - [x] Tests unitarios para todos los modulos
-- [ ] Soporte para mas fuentes (AlienVault OTX, Shodan)
-- [ ] Dashboard web opcional
+- [x] Soporte para mas fuentes (AlienVault OTX, Shodan)
+- [x] Dashboard web opcional
 
 ---
 
 ## Consideraciones de seguridad
 
 - Las credenciales se manejan exclusivamente mediante variables de entorno
-- Ninguna API key o contrasena se almacena en el codigo fuente
+- Ninguna API key o contraseña se almacena en el codigo fuente
 - El archivo `.env` esta excluido del control de versiones via `.gitignore`
 
 ---
